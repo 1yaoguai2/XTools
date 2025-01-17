@@ -18,6 +18,7 @@ Unity官方文档：[Unity - Manual: Project manifest](https://docs.unity3d.com/
 3. git add .
 4. git commit -m "优化"
 5. git push -f https://github.com/1yaoguai2/XTools.git upm
+6. 合并到Main分支
 
 
 
