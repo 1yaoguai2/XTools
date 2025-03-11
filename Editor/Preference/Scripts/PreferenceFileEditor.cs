@@ -143,7 +143,7 @@ namespace XTools
         [MenuItem("Tools/Preference/Show Tutorial Instructions")]
         static ReadmeScriptableObject SelectReadme()
         {
-            var ids = AssetDatabase.FindAssets("ReadmeScriptableObject t:ReadmeScriptableObject");
+            var ids = AssetDatabase.FindAssets("Readme t:ReadmeScriptableObject");
             if (ids.Length == 1)
             {
                 var readmeObject = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(ids[0]));
@@ -166,7 +166,7 @@ namespace XTools
         [MenuItem("Tools/Preference/CreateReadmeFile")]
         public static ReadmeScriptableObject CreateReadmeFile()
         {
-            var ids = AssetDatabase.FindAssets("ReadmeScriptableObject t:ReadmeScriptableObject");
+            var ids = AssetDatabase.FindAssets("Readme t:ReadmeScriptableObject");
             if (ids.Length == 1)
             {
                 var readmeObject = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(ids[0]));
