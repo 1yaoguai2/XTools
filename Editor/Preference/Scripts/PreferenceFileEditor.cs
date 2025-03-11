@@ -7,12 +7,12 @@ using Debug = UnityEngine.Debug;
 
 namespace XTools
 {
-    [CustomEditor(typeof(PreferenceReadme))]
+    [CustomEditor(typeof(ReadmeScriptableObject))]
     [InitializeOnLoad]
-    public class PreferenceEditor : Editor
+    public class PreferenceFileEditor : Editor
     {
 
-        static string kShowedReadmeSessionStateName = "PreferenceEditor.showedReadme";
+        static string kShowedReadmeSessionStateName = "ReadmeScriptableObject.showedReadme";
 
         static float kSpace = 16f;
 
@@ -20,7 +20,7 @@ namespace XTools
         private static readonly MethodInfo s_SaveWindowLayoutMethod;
         private static string assetPath = Application.dataPath + "/Preference/Editor/Layout.wlt";
 
-        static PreferenceEditor()
+        static PreferenceFileEditor()
         {
             EditorApplication.delayCall += SelectReadmeAutomatically;
             EditorApplication.quitting += SaveReadme;
@@ -141,20 +141,20 @@ namespace XTools
         /// </summary>
         /// <returns></returns>
         [MenuItem("Tools/Preference/Show Tutorial Instructions")]
-        static PreferenceReadme SelectReadme()
+        static ReadmeScriptableObject SelectReadme()
         {
-            var ids = AssetDatabase.FindAssets("PreferenceReadme t:PreferenceReadme");
+            var ids = AssetDatabase.FindAssets("ReadmeScriptableObject t:ReadmeScriptableObject");
             if (ids.Length == 1)
             {
                 var readmeObject = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(ids[0]));
 
                 Selection.objects = new UnityEngine.Object[] { readmeObject };
 
-                return (PreferenceReadme)readmeObject;
+                return (ReadmeScriptableObject)readmeObject;
             }
             else
             {
-                Debug.Log("Couldn't find a PreferenceReadme");
+                Debug.Log("Couldn't find a ReadmeScriptableObject");
                 return null;
             }
         }
@@ -164,21 +164,21 @@ namespace XTools
         /// </summary>
         /// <returns></returns>
         [MenuItem("Tools/Preference/CreateReadmeFile")]
-        public static PreferenceReadme CreateReadmeFile()
+        public static ReadmeScriptableObject CreateReadmeFile()
         {
-            var ids = AssetDatabase.FindAssets("PreferenceReadme t:PreferenceReadme");
+            var ids = AssetDatabase.FindAssets("ReadmeScriptableObject t:ReadmeScriptableObject");
             if (ids.Length == 1)
             {
                 var readmeObject = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(ids[0]));
 
                 Selection.objects = new UnityEngine.Object[] { readmeObject };
                 Debug.LogError("Readme,已经存在");
-                return (PreferenceReadme)readmeObject;
+                return (ReadmeScriptableObject)readmeObject;
             }
             else
             {
-                PreferenceReadme file = CreateInstance<PreferenceReadme>();
-                file.sections = new PreferenceReadme.Section[0];
+                ReadmeScriptableObject file = CreateInstance<ReadmeScriptableObject>();
+                file.sections = new ReadmeScriptableObject.Section[0];
                 AssetDatabase.CreateAsset(file, "Assets/Readme.asset");
                 AssetDatabase.Refresh();
                 return file;
@@ -188,7 +188,7 @@ namespace XTools
 
         protected override void OnHeaderGUI()
         {
-            var readme = (PreferenceReadme)target;
+            var readme = (ReadmeScriptableObject)target;
             Init();
 
             var iconWidth = Mathf.Min(EditorGUIUtility.currentViewWidth / 3f - 20f, 128f);
@@ -203,7 +203,7 @@ namespace XTools
 
         public override void OnInspectorGUI()
         {
-            var readme = (PreferenceReadme)target;
+            var readme = (ReadmeScriptableObject)target;
             Init();
 
             foreach (var section in readme.sections)
