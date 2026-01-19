@@ -20,7 +20,7 @@ public static class CustomLogger
     private static readonly StringBuilder s_StringBuilder = new StringBuilder(BUFFER_SIZE);
     private static string LogFilePath;    // 当前日志文件路径
     private static readonly object LogLock = new object();  // 线程同步锁
-    private static readonly string LogDirectory = Path.Combine(Application.streamingAssetsPath, "Logs");
+    private static readonly string LogDirectory = Path.Combine(Application.dataPath, "Logs");
     private static Queue<string> LogQueue = new Queue<string>(INITIAL_QUEUE_CAPACITY);
     private static string timestamp;
     private static string logMessage;
@@ -31,8 +31,6 @@ public static class CustomLogger
     private static string version;
 
     //日志堆栈信息
-    private static string fileName;
-    private static string lineNumber;
     private static LogType logType;
 
 
@@ -51,12 +49,12 @@ public static class CustomLogger
     [RuntimeInitializeOnLoadMethod]
     private static void RegisterQuitHandler()
     {
-        //Application.logMessageReceivedThreaded += OnLogMessageReceived;
+        Application.logMessageReceivedThreaded += OnLogMessageReceived;
         GetComputerInfo();
         Application.quitting += () =>
         {
             FlushLogsToFile(LogQueue);
-            //Application.logMessageReceivedThreaded -= OnLogMessageReceived;
+            Application.logMessageReceivedThreaded -= OnLogMessageReceived;
         };
     }
 
@@ -102,17 +100,108 @@ public static class CustomLogger
     }
 
     /// <summary>
-    /// 收到日志消息
+    /// 从Unity系统日志的堆栈信息中提取文件名和行号
     /// </summary>
-    /// <param name="condition"></param>
-    /// <param name="stacktrace"></param>
-    /// <param name="type"></param>
+    /// <param name="stacktrace">Unity提供的堆栈信息字符串</param>
+    /// <returns>文件名和行号</returns>
+    private static (string fileName, int lineNumber) ParseUnityStackTrace(string stacktrace)
+    {
+        if (string.IsNullOrEmpty(stacktrace))
+        {
+            return ("Unknown", 0);
+        }
+
+        try
+        {
+            // 尝试从堆栈信息中提取第一个有效的文件路径和行号
+            var lines = stacktrace.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                // 查找包含文件路径的行，格式通常为：at UnityEngine.MonoBehaviour.Start() (at <path>:<line>)
+                var indexOfAtPath = line.IndexOf(" (at ", StringComparison.OrdinalIgnoreCase);
+                if (indexOfAtPath > 0)
+                {
+                    var pathPart = line.Substring(indexOfAtPath + 5); // 跳过" (at "
+                    var indexOfLineNumber = pathPart.LastIndexOf(':');
+                    if (indexOfLineNumber > 0)
+                    {
+                        var fileName = pathPart.Substring(0, indexOfLineNumber);
+                        var lineNumberStr = pathPart.Substring(indexOfLineNumber + 1).TrimEnd(')');
+                        
+                        // 尝试解析行号
+                        if (int.TryParse(lineNumberStr, out int lineNumber))
+                        {
+                            // 提取文件名（去掉路径）
+                            fileName = Path.GetFileName(fileName);
+                            return (fileName, lineNumber);
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // 如果解析失败，返回默认值
+        }
+
+        return ("SystemLog", 0);
+    }
+
+    /// <summary>
+    /// 收到日志消息（包括Unity系统日志）
+    /// </summary>
+    /// <param name="condition">日志内容</param>
+    /// <param name="stacktrace">堆栈信息</param>
+    /// <param name="type">日志类型</param>
     private static void OnLogMessageReceived(string condition, string stacktrace, LogType type)
     {
-        //stacktrace如何使用堆栈字符串获取有用信息
-        //fileName？
-        //lineNumber？
-        logType = type;
+        try
+        {
+            timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            var (fileName, lineNumber) = ParseUnityStackTrace(stacktrace);
+
+            // 构建日志消息
+            ResetStringBuilder();
+            s_StringBuilder
+                .Append('[').Append(timestamp).Append(']')
+                .Append('[').Append(type.ToString().ToUpper()).Append(']')
+                .Append(condition).Append('\n')
+                .Append("File: ").Append(fileName).Append('\n')
+                .Append("Line: ").Append(lineNumber);
+
+            // 如果有堆栈信息，也添加进去
+            if (!string.IsNullOrEmpty(stacktrace))
+            {
+                s_StringBuilder.Append('\n').Append("Stack Trace:\n").Append(stacktrace);
+            }
+
+            logMessage = s_StringBuilder.ToString();
+
+            lock (LogLock)
+            {
+                // 检查队列大小
+                if (LogQueue.Count >= MAX_QUEUE_SIZE)
+                {
+                    var oldQueue = LogQueue;
+                    LogQueue = new Queue<string>(INITIAL_QUEUE_CAPACITY);
+
+                    var warningMsg = $"[{DateTime.Now:HH:mm:ss.fff}][WARNING] Log queue exceeded limit, older logs were saved and cleared";
+                    oldQueue.Enqueue(warningMsg);
+
+                    QueueLogsToSave(oldQueue);
+                }
+
+                LogQueue.Enqueue(logMessage);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Logger Error in OnLogMessageReceived: {e.Message}");
+        }
+        finally
+        {
+            ResetStringBuilder();
+        }
     }
 
     /// <summary>
@@ -214,6 +303,14 @@ public static class CustomLogger
     {
         LogWithContext(message, context, LogType.Log);
     }
+    
+    /// <summary>
+    /// 记录普通日志
+    /// </summary>
+    public static void LogInfo(string message, Object context = null)
+    {
+        LogWithContext(message, context, LogType.Log);
+    }
 
     /// <summary>
     /// 将日志队列写入文件并清空队列
@@ -280,5 +377,4 @@ public static class CustomLogger
             }
         });
     }
-
 }
