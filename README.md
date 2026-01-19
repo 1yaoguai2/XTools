@@ -12,7 +12,7 @@ Unity官方文档：[Unity - Manual: Project manifest](https://docs.unity3d.com/
 
 # 更新插件步骤
 
-1. 启动git-bash，转到目标地址
+1. 启动git-bash，转到目标地址，跟新版本
 
 2. git status，检查文件变化
 3. git add .
